@@ -5,128 +5,119 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phil Rodrigues Portfolio</title>
   <style>
-    /* Reset some defaults */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background: #f4f4f9; 
-      color: #333; 
-      line-height: 1.6; 
-    }
-
-    header {
-      background: #1e1e2f;
-      color: #fff;
-      padding: 40px 20px;
-      text-align: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    header h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-    }
-
-    header p {
-      font-size: 1.2rem;
-      color: #ddd;
-    }
-
-    main {
-      max-width: 1000px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-
-    .project {
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      margin-bottom: 50px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .project:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    }
-
-    .project h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #1e1e2f;
-    }
-
-    .project p {
-      text-align: center;
-      margin-bottom: 30px;
-      font-size: 1rem;
-      color: #555;
-    }
-
-    .project img {
-      width: 100%;
-      margin: 15px 0;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      display: block;
-    }
-
-    .caption {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #777;
-      margin-bottom: 20px;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 0.9rem;
-      color: #aaa;
-    }
-
-    @media (max-width: 600px) {
-      header h1 { font-size: 2rem; }
-      header p { font-size: 1rem; }
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; color: #333; line-height: 1.6; }
+    header { background: #1e1e2f; color: #fff; padding: 40px 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+    header p { font-size: 1.2rem; color: #ddd; }
+    main { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    section { margin-bottom: 60px; }
+    section h2 { text-align: center; margin-bottom: 30px; color: #1e1e2f; }
+    .project { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 40px; transition: transform 0.2s, box-shadow 0.2s; }
+    .project:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+    .project h3 { text-align: center; margin-bottom: 15px; color: #1e1e2f; }
+    .project p { text-align: center; margin-bottom: 20px; color: #555; }
+    .project img { width: 100%; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; display: block; }
+    .caption { text-align: center; font-size: 0.9rem; color: #777; margin-bottom: 20px; }
+    ul { max-width: 600px; margin: 0 auto; list-style: disc inside; }
+    footer { text-align: center; padding: 20px; font-size: 0.9rem; color: #aaa; }
+    @media (max-width: 600px) { header h1 { font-size: 2rem; } header p { font-size: 1rem; } }
   </style>
 </head>
 <body>
 
   <header>
     <h1>Phil Rodrigues</h1>
-    <p>Portfolio: Salesforce & Excel Data Projects</p>
+    <p>Electrical Engineer at Microsoft | Projects in Data, AI, Market Optimization, and Game Development</p>
   </header>
 
   <main>
-    <div class="project">
-      <h2>Salesforce & Excel Dashboard</h2>
-      <p>This project demonstrates Salesforce custom object setup, data tracking, and Excel pivot table dashboards showing site selection stages and available power by metro.</p>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Report.png?raw=true" alt="Screenshot 1">
-      <div class="caption">Salesforce Report</div>
+    <!-- About Me Section -->
+    <section class="about">
+      <h2>About Me</h2>
+      <p>I’m a data-driven Electrical Engineer at Microsoft with experience in data center infrastructure, project coordination, and analytical dashboards. Former college soccer player with a passion for solving inefficiencies in technology systems and workflows.</p>
+    </section>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Dashboard.png?raw=true" alt="Screenshot 2">
-      <div class="caption">Salesforce Dashboard</div>
+    <!-- Projects Section -->
+    <section class="projects">
+      <h2>Projects</h2>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Dashboard.png?raw=true" alt="Screenshot 3">
-      <div class="caption">Excel Dashboard</div>
+      <!-- Salesforce & Excel Project -->
+      <div class="project">
+        <h3>Salesforce & Excel Dashboard</h3>
+        <p>Demonstrates Salesforce custom object setup, pipeline tracking, and Excel dashboards for site selection and capacity analysis.</p>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Report.png?raw=true" alt="Salesforce Report">
+        <div class="caption">Salesforce Report</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Dashboard.png?raw=true" alt="Salesforce Dashboard">
+        <div class="caption">Salesforce Dashboard</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Dashboard.png?raw=true" alt="Excel Dashboard">
+        <div class="caption">Excel Dashboard</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Pipeline%20Health%20by%20Stage.png?raw=true" alt="Excel Pipeline Health">
+        <div class="caption">Excel Pipeline Health by Stage</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Capacity%20by%20Metro.png?raw=true" alt="Excel Capacity">
+        <div class="caption">Excel Capacity by Metro</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Active%20Site%20Opportunities%20by%20Stage.png?raw=true" alt="Excel Active Site Opportunities">
+        <div class="caption">Excel Active Site Opportunities by Stage</div>
+        <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Infrastructure%20Analysis.png?raw=true" alt="Excel Infrastructure Analysis">
+        <div class="caption">Excel Infrastructure Analysis</div>
+      </div>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Pipeline%20Health%20by%20Stage.png?raw=true" alt="Screenshot 4">
-      <div class="caption">Excel Pipeline Health by Stage</div>
+      <!-- Python Stock Market Portfolio Manager -->
+      <div class="project">
+        <h3>Python Stock Market Portfolio Manager</h3>
+        <p>To be added soon.</p>
+      </div>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Capacity%20by%20Metro.png?raw=true" alt="Screenshot 5">
-      <div class="caption">Excel Capacity by Metro</div>
+      <!-- Greenfoot Flappybird Videogame -->
+      <div class="project">
+        <h3>Greenfoot Flappybird Videogame</h3>
+        <p>To be added soon.</p>
+      </div>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Active%20Site%20Opportunities%20by%20Stage.png?raw=true" alt="Screenshot 6">
-      <div class="caption">Excel Active Site Opportunities by Stage</div>
+      <!-- AssetPulse Prototype -->
+      <div class="project">
+        <h3>AssetPulse Prototype</h3>
+        <p>To be added soon.</p>
+      </div>
 
-      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Infrastructure%20Analysis.png?raw=true" alt="Screenshot 7">
-      <div class="caption">Excel Infrastructure Analysis</div>
-    </div>
+      <!-- Matlab Free Roam Video Game -->
+      <div class="project">
+        <h3>Matlab Free Roam Video Game</h3>
+        <p>To be added soon.</p>
+      </div>
+
+    </section>
+
+    <!-- Professional Experience Section -->
+    <section class="experience">
+      <h2>Professional Experience</h2>
+      <div class="job">
+        <h3>Microsoft | Electrical Engineer</h3>
+        <p>Responsible for data center electrical infrastructure, system monitoring, and process optimization. Built dashboards and reporting pipelines for operational efficiency.</p>
+      </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section class="skills">
+      <h2>Skills & Tools</h2>
+      <ul>
+        <li>Salesforce / CRM Management</li>
+        <li>Excel / Pivot Tables / Dashboards</li>
+        <li>Python / Data Analysis / Automation</li>
+        <li>Project Management / Workflow Optimization</li>
+        <li>AI / ML Concepts / SaaS Tools</li>
+        <li>Game Development (Greenfoot, MATLAB)</li>
+      </ul>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact">
+      <h2>Contact</h2>
+      <p>Email: phil@example.com</p>
+      <p>GitHub: <a href="https://github.com/pr3331221">github.com/pr3331221</a></p>
+    </section>
+
   </main>
 
   <footer>
