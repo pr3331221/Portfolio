@@ -1,44 +1,137 @@
-cel<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phil Rodrigues Portfolio</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f8f8; color: #333; }
-    h1, h2 { text-align: center; }
-    .project { margin: 40px auto; max-width: 900px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .project img { width: 100%; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
-    .caption { font-size: 14px; color: #666; text-align: center; margin-bottom: 20px; }
+    /* Reset some defaults */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #f4f4f9; 
+      color: #333; 
+      line-height: 1.6; 
+    }
+
+    header {
+      background: #1e1e2f;
+      color: #fff;
+      padding: 40px 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      color: #ddd;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .project {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 50px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .project:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .project h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #1e1e2f;
+    }
+
+    .project p {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .project img {
+      width: 100%;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      display: block;
+    }
+
+    .caption {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #777;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 2rem; }
+      header p { font-size: 1rem; }
+    }
   </style>
 </head>
 <body>
-  <h1>Phil Rodrigues Portfolio</h1>
-  <div class="project">
-    <h2>Salesforce & Excel Dashboard</h2>
-    <p>This project demonstrates Salesforce custom object setup, data tracking, and Excel pivot table dashboards showing site selection stages and available power by metro.</p>
 
-    <!-- Placeholder images for now -->
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Report.png?raw=true" alt="Screenshot 1">
-    <div class="caption">Salesforce Report</div>
+  <header>
+    <h1>Phil Rodrigues</h1>
+    <p>Portfolio: Salesforce & Excel Data Projects</p>
+  </header>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Dashboard.png?raw=true" alt="Screenshot 2">
-    <div class="caption">Salesforce Dashboard</div>
+  <main>
+    <div class="project">
+      <h2>Salesforce & Excel Dashboard</h2>
+      <p>This project demonstrates Salesforce custom object setup, data tracking, and Excel pivot table dashboards showing site selection stages and available power by metro.</p>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Dashboard.png?raw=true" alt="Screenshot 3">
-    <div class="caption">Excel Dashboard</div>
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Report.png?raw=true" alt="Screenshot 1">
+      <div class="caption">Salesforce Report</div>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Pipeline%20Health%20by%20Stage.png?raw=true" alt="Screenshot 4">
-    <div class="caption">Excel Pipeline Health by Stage</div>
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Salesforce%20Dashboard.png?raw=true" alt="Screenshot 2">
+      <div class="caption">Salesforce Dashboard</div>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Capacity%20by%20Metro.png?raw=true" alt="Screenshot 5">
-    <div class="caption">Excel Capacity by Metro</div>
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Dashboard.png?raw=true" alt="Screenshot 3">
+      <div class="caption">Excel Dashboard</div>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Active%20Site%20Opportunities%20by%20Stage.png?raw=true" alt="Screenshot 6">
-    <div class="caption">Excel Active Site Opportunities by Stage</div>
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Pipeline%20Health%20by%20Stage.png?raw=true" alt="Screenshot 4">
+      <div class="caption">Excel Pipeline Health by Stage</div>
 
-    <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Infrastructure%20Analysis.png?raw=true" alt="Screenshot 7">
-    <div class="caption">Excel Infrastructure Analysis</div>
-  </div>
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Capacity%20by%20Metro.png?raw=true" alt="Screenshot 5">
+      <div class="caption">Excel Capacity by Metro</div>
+
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Active%20Site%20Opportunities%20by%20Stage.png?raw=true" alt="Screenshot 6">
+      <div class="caption">Excel Active Site Opportunities by Stage</div>
+
+      <img src="https://github.com/pr3331221/Portfolio/blob/main/Excel%20Infrastructure%20Analysis.png?raw=true" alt="Screenshot 7">
+      <div class="caption">Excel Infrastructure Analysis</div>
+    </div>
+  </main>
+
+  <footer>
+    © 2026 Phil Rodrigues | Built with GitHub Pages
+  </footer>
+
 </body>
 </html>
