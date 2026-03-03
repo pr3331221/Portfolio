@@ -120,7 +120,7 @@ def load_tickers(file_path: str) -> list[str]:
     sym_col = next((c for c in df.columns if c.lower() in ("symbol","ticker","sym")), None)
     if sym_col is None:
         raise ValueError(f"No 'Symbol' column found in {file_path}. Columns: {df.columns.tolist()}")
-    df["Symbol"] = df[sym_col].astype(str).str.replace("/", "-").str.strip().str.upper()
+    df["Symbol"] = df[sym_col].astype(str).str.replace("/", "-").str.replace(r"\s+", "", regex=True).str.strip().str.upper()
 
     # Filter by market cap if column exists
     cap_col = next((c for c in df.columns if "market" in c.lower() and "cap" in c.lower()), None)
@@ -130,8 +130,25 @@ def load_tickers(file_path: str) -> list[str]:
         df = df[df["_mc"] >= MIN_MARKET_CAP]
         log.info(f"Market cap filter: {before} -> {len(df)} tickers")
 
-    # Drop obviously non-investable patterns
+    # Drop obviously non-investable patterns in the symbol itself
     df = df[~df["Symbol"].str.contains(r"OTC|\.PK|ADR|\^", regex=True, na=False)]
+
+    # Drop non-stock instruments by suffix.
+    # Real warrants/rights/units always have a suffix appended to a base
+    # ticker, making total symbol length 5+ chars. This avoids false
+    # positives on real stocks like UUUU, CAR, SNOW, FLOW, PRNU etc.
+    #
+    #   ends in W / WS / WW (5+ chars) -> warrant  (e.g. NAMSW, BWMCWS)
+    #   ends in R            (6+ chars) -> rights   (e.g. ACMCR -- but CAR is fine)
+    #   ends in U            (6+ chars) -> units    (e.g. DNAAU -- but UUUU is fine)
+    before_suffix = len(df)
+    warrant_pat = r"^[A-Z]{4,}(WS|WW|W)$"   # 5+ total chars ending W/WS/WW
+    rights_pat  = r"^[A-Z]{4,}R$"            # 5+ total chars ending R (base 4+)
+    units_pat   = r"^[A-Z]{4,}U$"            # 5+ total chars ending U (base 4+)
+    combined    = f"({warrant_pat})|({rights_pat})|({units_pat})"
+    df = df[~df["Symbol"].str.match(combined)]
+    dropped = before_suffix - len(df)
+    log.info(f"Non-stock suffix filter (warrants/rights/units): removed {dropped}, kept {len(df)}")
 
     tickers = sorted(set(df["Symbol"].tolist()) - UNINVESTABLE)
     log.info(f"Final ticker list: {len(tickers)}")
@@ -287,7 +304,27 @@ def fetch_all(tickers: list[str]) -> pd.DataFrame:
     log.info(f"Fetched {len(rows)} tickers, {failed} failed/skipped")
     df = pd.DataFrame(rows)
 
-    # Force ALL columns to numeric — yfinance sometimes returns strings
+    # Drop tickers where yfinance returned no market cap at all.
+    # These are almost always warrants, SPACs, or data-dead shells
+    # that slipped through the CSV filter (blank market cap in source file).
+    before_mc = len(df)
+    df = df[df["Market_Cap"].notna() & (df["Market_Cap"] > 0)]
+    log.info(f"Dropped {before_mc - len(df)} tickers with no market cap data after fetch")
+
+    # Final safety net: re-apply the suffix filter on whatever tickers
+    # survived fetching, in case any slipped through with internal spaces
+    # or other encoding quirks in the source CSV.
+    import re as _re
+    _w = r"^[A-Z]{4,}(WS|WW|W)$"
+    _r = r"^[A-Z]{4,}R$"
+    _u = r"^[A-Z]{4,}U$"
+    _pat = f"({_w})|({_r})|({_u})"
+    before_recheck = len(df)
+    df = df[~df["Ticker"].str.match(_pat)]
+    if before_recheck - len(df) > 0:
+        log.info(f"Post-fetch suffix recheck: removed {before_recheck - len(df)} non-stock instruments")
+
+    # Force ALL columns to numeric - yfinance sometimes returns strings
     for col in df.columns:
         if col not in ("Ticker", "Sector", "Industry"):
             df[col] = pd.to_numeric(df[col], errors="coerce")
