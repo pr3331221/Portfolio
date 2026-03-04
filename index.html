@@ -130,6 +130,16 @@
     ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #3a4050; }
 
+    .project-image-wrap { cursor: zoom-in; }
+
+    .lightbox { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 24px; }
+    .lightbox.open { display: flex; animation: lbFadeIn 0.2s ease; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 24px 80px rgba(0,0,0,0.6); object-fit: contain; }
+    .lightbox-caption { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-dim); background: rgba(15,18,24,0.85); padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); white-space: nowrap; }
+    .lightbox-close { position: fixed; top: 20px; right: 24px; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; background: rgba(15,18,24,0.85); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; transition: color 0.2s; }
+    .lightbox-close:hover { color: var(--text); }
+    @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
     @media (max-width: 768px) {
       nav { padding: 16px 24px; }
       .nav-links { gap: 20px; }
@@ -225,7 +235,7 @@
           </div>
         </div>
         <div class="project-meta">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Streamlit</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Scikit-Learn · NumPy</span>
         </div>
       </div>
 
@@ -249,7 +259,7 @@
           </div>
         </div>
         <div class="project-meta">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Scikit-Learn · NumPy</span>
         </div>
       </div>
 
@@ -494,7 +504,40 @@
     <p>Built with GitHub Pages</p>
   </footer>
 
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <span class="lightbox-close" id="lightbox-close">&#x2715; close</span>
+    <img id="lightbox-img" src="" alt="">
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+  </div>
+
   <script>
+    // Lightbox
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightbox-img');
+    const lbCaption = document.getElementById('lightbox-caption');
+
+    document.querySelectorAll('.project-image-wrap').forEach(wrap => {
+      wrap.addEventListener('click', () => {
+        const img = wrap.querySelector('img');
+        const caption = wrap.querySelector('.img-caption');
+        lbImg.src = img.src;
+        lbImg.alt = img.alt;
+        lbCaption.textContent = caption ? caption.textContent : '';
+        lightbox.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
