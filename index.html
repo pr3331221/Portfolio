@@ -458,13 +458,13 @@
         Let's build<br>something <em>great</em><br>together.
       </div>
       <div class="contact-links fade-in">
-        <a href="/cdn-cgi/l/email-protection#3262405d560300000372555f535b5e1c515d5f" class="contact-item">
+        <a href="mailto:Prod1221@gmail.com" class="contact-item">
           <div class="contact-icon">
             <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
           </div>
           <div>
             <div class="contact-item-label">Email</div>
-            <div class="contact-item-value"><span class="__cf_email__" data-cfemail="2575574a4114171714654248444c490b464a48">[email&#160;protected]</span></div>
+            <div class="contact-item-value">Prod1221@gmail.com</div>
           </div>
         </a>
         <a href="https://github.com/pr3331221" target="_blank" class="contact-item">
@@ -494,7 +494,7 @@
     <p>Built with GitHub Pages</p>
   </footer>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -509,4 +509,13 @@
     document.querySelectorAll('.projects-grid .project-card').forEach((el, i) => {
       el.style.transitionDelay = `${i * 50}ms`;
     });
-    document.querySelectorAll('.experience-list .job-card').f
+    document.querySelectorAll('.experience-list .job-card').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 60}ms`;
+    });
+    document.querySelectorAll('.skills-grid .skill-group').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 40}ms`;
+    });
+  </script>
+
+</body>
+</html>
