@@ -69,7 +69,7 @@
     .project-card h3 { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--text); margin-bottom: 10px; letter-spacing: -0.01em; }
     .project-card p { font-size: 0.92rem; color: var(--text-muted); font-weight: 300; line-height: 1.75; max-width: 640px; margin-bottom: 18px; }
     .project-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }
-    .project-image-wrap { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); }
+    .project-image-wrap { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); cursor: zoom-in; }
     .project-image-wrap img { width: 100%; display: block; transition: transform 0.4s ease; }
     .project-image-wrap:hover img { transform: scale(1.03); }
     .project-image-wrap .img-caption { padding: 8px 12px; font-size: 0.75rem; color: var(--text-dim); font-family: 'DM Mono', monospace; border-top: 1px solid var(--border); }
@@ -131,8 +131,6 @@
     ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #3a4050; }
 
-    .project-image-wrap { cursor: zoom-in; }
-
     .research-grid { display: grid; gap: 2px; }
     .research-card { background: var(--bg3); padding: 28px 36px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; transition: background 0.2s; position: relative; }
     .research-card:first-child { border-radius: 10px 10px 0 0; }
@@ -146,7 +144,7 @@
     .research-link { font-family: 'DM Mono', monospace; font-size: 0.76rem; color: #c4a3f0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; transition: color 0.2s; }
     .research-link:hover { color: #d9beff; }
     .research-link::after { content: '↗'; font-size: 0.7rem; }
-    .research-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; }
+    .research-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); max-width: 130px; word-break: break-word; }
     .video-wrap { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); margin-top: 20px; }
     .video-wrap video { width: 100%; display: block; max-height: 340px; object-fit: contain; background: #000; }
 
@@ -218,7 +216,7 @@
           <div class="stat-label">Portfolio Projects</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">∞</div>
+          <div class="stat-num">&#8734;</div>
           <div class="stat-label">MW Infra Managed</div>
         </div>
         <div class="stat-card">
@@ -381,6 +379,16 @@
           <span class="project-tag">Game Development</span>
           <h3>MATLAB Free Roam Game</h3>
           <p>An open-world free-roam game built entirely in MATLAB, demonstrating real-time graphics rendering, input handling, and game state management within an engineering environment.</p>
+          <div class="project-images">
+            <div class="project-image-wrap">
+              <img src="YOUR_FLOWCHART_URL" alt="MATLAB Game Flowchart">
+              <div class="img-caption">Game Flowchart</div>
+            </div>
+            <div class="project-image-wrap">
+              <img src="YOUR_GAMEUI_URL" alt="MATLAB Game UI">
+              <div class="img-caption">Game UI</div>
+            </div>
+          </div>
           <div class="project-links" style="margin-top:20px;">
             <a href="https://raw.githubusercontent.com/pr3331221/Portfolio/refs/heads/main/matlabgame.m" class="project-link" target="_blank">View Source Code</a>
           </div>
@@ -399,7 +407,7 @@
           <div class="project-images">
             <div class="project-image-wrap">
               <img src="https://github.com/pr3331221/Portfolio/blob/main/One-Thousand%20Checkboxes.png?raw=true" alt="One Thousand Checkboxes UI">
-              <div class="img-caption"><!-- REPLACE: caption --></div>
+              <div class="img-caption">One Thousand Checkboxes UI</div>
             </div>
           </div>
           <div class="project-links" style="margin-top:20px;">
@@ -441,22 +449,22 @@
           <p>Research paper examining degradation mechanisms, reliability modeling, and failure modes in semiconductor devices over operational lifetimes.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ECE 5033 Midterm Essay Phil Rodrigues REV 3.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">EE · Reliability · Materials</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">EE · Reliability · Materials</span>
         </div>
       </div>
 
       <div class="research-card fade-in">
         <div>
-          <span class="research-field">Semiconductor & Biomedical Engineering</span>
+          <span class="research-field">Semiconductor &amp; Biomedical Engineering</span>
           <h3>Biomedical Semiconductor Devices</h3>
           <p>Research exploring semiconductor applications in biomedical contexts, including sensor design, signal processing, and clinical device integration.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ECE 5033 FINAL PAPER Phil Rodrigues REV 3.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">EE · Biomedical · Sensors</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">EE · Biomedical · Sensors</span>
         </div>
       </div>
 
@@ -467,9 +475,9 @@
           <p>Academic paper on MRS techniques, spectral analysis methods, and applications in material characterization and medical diagnostics.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/MRS ECE 5206 - Final Paper.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Physics · Imaging · Signal Processing</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Physics · Imaging · Signal Processing</span>
         </div>
       </div>
 
@@ -480,9 +488,9 @@
           <p>Economics research paper investigating the structural, market, and policy dimensions of labor trafficking through an economic lens.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/Labor Trafficking Paper (1).pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Economics · Policy</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Economics · Policy</span>
         </div>
       </div>
 
@@ -493,9 +501,9 @@
           <p>Cybersecurity research paper examining the tension between national security surveillance and individual privacy rights, tracing the debate through the origins of the World Wide Web and the post-9/11 legislative landscape.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/Final Report Cybersecurity.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Cybersecurity · Policy · Law</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Cybersecurity · Policy · Law</span>
         </div>
       </div>
 
@@ -506,9 +514,9 @@
           <p>A life perspective paper exploring the phenomenology of time and its relationship to physical space and personal place — examining how human experience shapes and is shaped by temporal perception.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ARP STEP 5-FINAL.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Philosophy · Humanities</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Philosophy · Humanities</span>
         </div>
       </div>
 
@@ -626,13 +634,13 @@
         Let's build<br>something <em>great</em><br>together.
       </div>
       <div class="contact-links fade-in">
-        <a href="/cdn-cgi/l/email-protection#4a1a38252e7b78787b0a2d272b232664292527" class="contact-item">
+        <a href="mailto:Prod1221@gmail.com" class="contact-item">
           <div class="contact-icon">
             <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
           </div>
           <div>
             <div class="contact-item-label">Email</div>
-            <div class="contact-item-value"><span class="__cf_email__" data-cfemail="3565475a5104070704755258545c591b565a58">[email&#160;protected]</span></div>
+            <div class="contact-item-value">Prod1221@gmail.com</div>
           </div>
         </a>
         <a href="https://github.com/pr3331221" target="_blank" class="contact-item">
@@ -658,7 +666,7 @@
   </section>
 
   <footer>
-    <p>© 2026 Phil Rodrigues</p>
+    <p>&#169; 2026 Phil Rodrigues</p>
     <p>Built with GitHub Pages</p>
   </footer>
 
@@ -669,7 +677,7 @@
     <div class="lightbox-caption" id="lightbox-caption"></div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     // Lightbox
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lightbox-img');
@@ -711,4 +719,13 @@
     document.querySelectorAll('.projects-grid .project-card').forEach((el, i) => {
       el.style.transitionDelay = `${i * 50}ms`;
     });
-    document.querySelectorAll('.experience-list .job-card').f
+    document.querySelectorAll('.experience-list .job-card').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 60}ms`;
+    });
+    document.querySelectorAll('.skills-grid .skill-group').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 40}ms`;
+    });
+  </script>
+
+</body>
+</html>
