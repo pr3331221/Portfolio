@@ -122,8 +122,9 @@
     footer p { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
-    .fade-in.visible { opacity: 1; transform: none; }
+    .fade-in { opacity: 1; transform: none; transition: opacity 0.6s ease, transform 0.6s ease; }
+    .js-loaded .fade-in { opacity: 0; transform: translateY(16px); }
+    .js-loaded .fade-in.visible { opacity: 1; transform: none; }
 
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -131,6 +132,23 @@
     ::-webkit-scrollbar-thumb:hover { background: #3a4050; }
 
     .project-image-wrap { cursor: zoom-in; }
+
+    .research-grid { display: grid; gap: 2px; }
+    .research-card { background: var(--bg3); padding: 28px 36px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; transition: background 0.2s; position: relative; }
+    .research-card:first-child { border-radius: 10px 10px 0 0; }
+    .research-card:last-child { border-radius: 0 0 10px 10px; }
+    .research-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent2); transform: scaleY(0); transition: transform 0.3s ease; transform-origin: bottom; }
+    .research-card:hover { background: #151c28; }
+    .research-card:hover::before { transform: scaleY(1); }
+    .research-field { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #c4a3f0; background: rgba(196,163,240,0.08); border: 1px solid rgba(196,163,240,0.2); padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .research-card h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text); margin-bottom: 8px; letter-spacing: -0.01em; }
+    .research-card p { font-size: 0.88rem; color: var(--text-muted); font-weight: 300; line-height: 1.7; max-width: 640px; }
+    .research-link { font-family: 'DM Mono', monospace; font-size: 0.76rem; color: #c4a3f0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; transition: color 0.2s; }
+    .research-link:hover { color: #d9beff; }
+    .research-link::after { content: '↗'; font-size: 0.7rem; }
+    .research-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; }
+    .video-wrap { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); margin-top: 20px; }
+    .video-wrap video { width: 100%; display: block; max-height: 340px; object-fit: contain; background: #000; }
 
     .lightbox { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 24px; }
     .lightbox.open { display: flex; animation: lbFadeIn 0.2s ease; }
@@ -166,6 +184,7 @@
       <li><a href="#projects">Projects</a></li>
       <li><a href="#experience">Experience</a></li>
       <li><a href="#skills">Skills</a></li>
+      <li><a href="#research">Research</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
   </nav>
@@ -235,7 +254,7 @@
           </div>
         </div>
         <div class="project-meta">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Scikit-Learn · NumPy</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Streamlit</span>
         </div>
       </div>
 
@@ -259,7 +278,7 @@
           </div>
         </div>
         <div class="project-meta">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas · Scikit-Learn · NumPy</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · Pandas</span>
         </div>
       </div>
 
@@ -341,9 +360,20 @@
           <span class="project-tag">Game Development</span>
           <h3>Greenfoot Flappy Bird</h3>
           <p>A fully playable Flappy Bird clone in Greenfoot/Java featuring custom physics, collision detection, and progressive difficulty scaling.</p>
+          <!-- VIDEO: replace YOUR_VIDEO.mov with your uploaded .mov filename or hosted URL -->
+          <div class="video-wrap">
+            <video controls>
+              <source src="YOUR_VIDEO.mov" type="video/quicktime">
+              <source src="YOUR_VIDEO.mov" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <div class="project-links" style="margin-top:20px;">
+            <!-- CODE LINK: replace YOUR_CODE_URL with your raw GitHub file URL -->
+            <a href="YOUR_CODE_URL" class="project-link" target="_blank">View Source Code</a>
+          </div>
         </div>
         <div class="project-meta">
-          <span class="coming-soon-badge"><span class="dot"></span> Coming soon</span>
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Java · Greenfoot</span>
         </div>
       </div>
@@ -353,10 +383,143 @@
           <span class="project-tag">Game Development</span>
           <h3>MATLAB Free Roam Game</h3>
           <p>An open-world free-roam game built entirely in MATLAB, demonstrating real-time graphics rendering, input handling, and game state management within an engineering environment.</p>
+          <div class="project-links" style="margin-top:20px;">
+            <a href="https://u.osu.edu/fe1181au20sec10413r/" class="project-link" target="_blank">View Project Documentation Website</a>
+          </div>
         </div>
         <div class="project-meta">
-          <span class="coming-soon-badge"><span class="dot"></span> Coming soon</span>
           <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">MATLAB</span>
+        </div>
+      </div>
+
+      <div class="project-card fade-in">
+        <div>
+          <span class="project-tag">Systems Design / Web</span>
+          <h3>One Thousand Checkboxes</h3>
+          <p>A shared, interactive checkbox grid where every user sees and affects the same global state — a scaled-down learning project inspired by the viral One Million Checkboxes, focused on real-time systems design, collaborative state management, and practical product iteration. Built as a capstone for an Azure engineering course.<br><br>
+          <span style="font-size:0.82rem;color:var(--text-dim);font-family:'DM Mono',monospace;">Completed: Static UI grid (§1–2), storage layer (§3), API with rate limiting &amp; input validation (§4), integration &amp; sync with polling &amp; observability hooks (§5), OpenTelemetry instrumentation.</span></p>
+          <div class="project-images">
+            <div class="project-image-wrap">
+              <!-- IMAGE: replace YOUR_IMAGE_URL with your screenshot URL -->
+              <img src="YOUR_IMAGE_URL" alt="One Thousand Checkboxes UI">
+              <div class="img-caption"><!-- REPLACE: caption --></div>
+            </div>
+          </div>
+          <div class="project-links" style="margin-top:20px;">
+            <!-- CODE LINK: replace YOUR_CODE_URL with your GitHub repo or raw file URL -->
+            <a href="YOUR_CODE_URL" class="project-link" target="_blank">View Source Code</a>
+          </div>
+        </div>
+        <div class="project-meta">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Azure · OpenTelemetry · REST</span>
+        </div>
+      </div>
+
+      <div class="project-card fade-in">
+        <div>
+          <span class="project-tag">Hardware / Embedded / Python</span>
+          <h3>DTAG — Digital Tracking &amp; Alert Gateway</h3>
+          <p>Capstone project from university. Designed a digital live-tracking device with GUI for firefighters using a Python CLI and Meshtastic T-Beam ESP32 modules. Provides real-time position updates on full-Earth maps for operational safety in communication-denied environments.</p>
+          <div class="project-links" style="margin-top:20px;">
+            <!-- PDF LINK: replace YOUR_PDF_URL with your project documentation PDF URL -->
+            <a href="YOUR_PDF_URL" class="project-link" target="_blank">View Project Documentation (PDF)</a>
+          </div>
+        </div>
+        <div class="project-meta">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">Python · ESP32 · Meshtastic</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Research Papers Section -->
+  <section class="section" id="research">
+    <p class="section-label fade-in">// 03 — Research</p>
+    <h2 class="section-title fade-in">Academic work.</h2>
+    <div class="research-grid">
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Semiconductor Engineering</span>
+          <h3>Semiconductor Device Aging</h3>
+          <p>Research paper examining degradation mechanisms, reliability modeling, and failure modes in semiconductor devices over operational lifetimes.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">EE · Reliability · Materials</span>
+        </div>
+      </div>
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Biomedical Engineering</span>
+          <h3>Biomedical Semiconductor Devices</h3>
+          <p>Research exploring semiconductor applications in biomedical contexts, including sensor design, signal processing, and clinical device integration.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">EE · Biomedical · Sensors</span>
+        </div>
+      </div>
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Physics / Imaging</span>
+          <h3>Magnetic Resonance Spectroscopy</h3>
+          <p>Academic paper on MRS techniques, spectral analysis methods, and applications in material characterization and medical diagnostics.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Physics · Imaging · Signal Processing</span>
+        </div>
+      </div>
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Economics</span>
+          <h3>Labor Trafficking: An Economic Analysis</h3>
+          <p>Economics research paper investigating the structural, market, and policy dimensions of labor trafficking through an economic lens.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Economics · Policy</span>
+        </div>
+      </div>
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Cybersecurity / Policy</span>
+          <h3>Security vs. Privacy: The Patriot Act &amp; the Origins of the Web</h3>
+          <p>Cybersecurity research paper examining the tension between national security surveillance and individual privacy rights, tracing the debate through the origins of the World Wide Web and the post-9/11 legislative landscape.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Cybersecurity · Policy · Law</span>
+        </div>
+      </div>
+
+      <div class="research-card fade-in">
+        <div>
+          <span class="research-field">Philosophy / Humanities</span>
+          <h3>Understanding Time: Space, Place, and Lived Experience</h3>
+          <p>A life perspective paper exploring the phenomenology of time and its relationship to physical space and personal place — examining how human experience shapes and is shaped by temporal perception.</p>
+          <!-- PDF LINK: replace YOUR_PDF_URL with your paper PDF URL -->
+          <a href="YOUR_PDF_URL" class="research-link" target="_blank">Read Paper (PDF)</a>
+        </div>
+        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;max-width:140px;line-height:1.5;">Philosophy · Humanities</span>
         </div>
       </div>
 
@@ -364,7 +527,7 @@
   </section>
 
   <section class="section" id="experience">
-    <p class="section-label fade-in">// 03 — Experience</p>
+    <p class="section-label fade-in">// 04 — Experience</p>
     <h2 class="section-title fade-in">Where I've worked.</h2>
     <div class="experience-list">
 
@@ -419,7 +582,7 @@
   </section>
 
   <section class="section" id="skills">
-    <p class="section-label fade-in">// 04 — Skills</p>
+    <p class="section-label fade-in">// 05 — Skills</p>
     <h2 class="section-title fade-in">Tools of the trade.</h2>
     <div class="skills-grid">
       <div class="skill-group fade-in">
@@ -462,19 +625,19 @@
   </section>
 
   <section class="section" id="contact">
-    <p class="section-label fade-in">// 05 — Contact</p>
+    <p class="section-label fade-in">// 06 — Contact</p>
     <div class="contact-grid">
       <div class="contact-text fade-in">
         Let's build<br>something <em>great</em><br>together.
       </div>
       <div class="contact-links fade-in">
-        <a href="mailto:Prod1221@gmail.com" class="contact-item">
+        <a href="/cdn-cgi/l/email-protection#4a1a38252e7b78787b0a2d272b232664292527" class="contact-item">
           <div class="contact-icon">
             <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
           </div>
           <div>
             <div class="contact-item-label">Email</div>
-            <div class="contact-item-value">Prod1221@gmail.com</div>
+            <div class="contact-item-value"><span class="__cf_email__" data-cfemail="3565475a5104070704755258545c591b565a58">[email&#160;protected]</span></div>
           </div>
         </a>
         <a href="https://github.com/pr3331221" target="_blank" class="contact-item">
@@ -511,7 +674,7 @@
     <div class="lightbox-caption" id="lightbox-caption"></div>
   </div>
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     // Lightbox
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lightbox-img');
@@ -538,6 +701,7 @@
     lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
 
+    document.documentElement.classList.add('js-loaded');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -552,13 +716,4 @@
     document.querySelectorAll('.projects-grid .project-card').forEach((el, i) => {
       el.style.transitionDelay = `${i * 50}ms`;
     });
-    document.querySelectorAll('.experience-list .job-card').forEach((el, i) => {
-      el.style.transitionDelay = `${i * 60}ms`;
-    });
-    document.querySelectorAll('.skills-grid .skill-group').forEach((el, i) => {
-      el.style.transitionDelay = `${i * 40}ms`;
-    });
-  </script>
-
-</body>
-</html>
+    document.querySelectorAll('.experience-list .job-card').f
