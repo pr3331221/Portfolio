@@ -144,7 +144,7 @@
     .research-link { font-family: 'DM Mono', monospace; font-size: 0.76rem; color: #c4a3f0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; transition: color 0.2s; }
     .research-link:hover { color: #d9beff; }
     .research-link::after { content: '↗'; font-size: 0.7rem; }
-    .research-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); max-width: 130px; word-break: break-word; }
+    .research-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); max-width: 130px; word-break: break-word; line-height: 1.6; }
     .video-wrap { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); margin-top: 20px; }
     .video-wrap video { width: 100%; display: block; max-height: 340px; object-fit: contain; background: #000; }
 
@@ -440,12 +440,10 @@
           <p>Designed a chemically and biologically-enhanced alarm clock in SolidWorks and created a functional 3D-printed prototype. Project includes a full Technical Design Review covering system architecture, material selection, and assembly specifications.</p>
           <div class="project-images">
             <div class="project-image-wrap">
-              <!-- e.g. https://github.com/pr3331221/Portfolio/blob/main/FILENAME.png?raw=true -->
               <img src="https://github.com/pr3331221/Portfolio/blob/main/detaileddrawing.png?raw=true" alt="SolidWorks Detailed Drawing">
               <div class="img-caption">SolidWorks Detailed Drawing</div>
             </div>
             <div class="project-image-wrap">
-              <!-- e.g. https://github.com/pr3331221/Portfolio/blob/main/FILENAME.png?raw=true -->
               <img src="https://github.com/pr3331221/Portfolio/blob/main/explodedassembly.png?raw=true" alt="Exploded Assembly Drawing">
               <div class="img-caption">Exploded Assembly Drawing</div>
             </div>
@@ -475,9 +473,9 @@
           <p>Research paper examining degradation mechanisms, reliability modeling, and failure modes in semiconductor devices over operational lifetimes.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ECE 5033 Midterm Essay Phil Rodrigues REV 3.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">EE · Reliability · Materials</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>EE · Reliability · Materials</span>
         </div>
       </div>
 
@@ -488,9 +486,9 @@
           <p>Research exploring semiconductor applications in biomedical contexts, including sensor design, signal processing, and clinical device integration.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ECE 5033 FINAL PAPER Phil Rodrigues REV 3.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">EE · Biomedical · Sensors</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>EE · Biomedical · Sensors</span>
         </div>
       </div>
 
@@ -501,9 +499,9 @@
           <p>Academic paper on MRS techniques, spectral analysis methods, and applications in material characterization and medical diagnostics.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/MRS ECE 5206 - Final Paper.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Physics · Imaging · Signal Processing</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>Physics · Imaging · Signal Processing</span>
         </div>
       </div>
 
@@ -514,9 +512,9 @@
           <p>Economics research paper investigating the structural, market, and policy dimensions of labor trafficking through an economic lens.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/Labor Trafficking Paper (1).pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Economics · Policy</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>Economics · Policy</span>
         </div>
       </div>
 
@@ -527,9 +525,9 @@
           <p>Cybersecurity research paper examining the tension between national security surveillance and individual privacy rights, tracing the debate through the origins of the World Wide Web and the post-9/11 legislative landscape.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/Final Report Cybersecurity.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Cybersecurity · Policy · Law</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>Cybersecurity · Policy · Law</span>
         </div>
       </div>
 
@@ -540,9 +538,9 @@
           <p>A life perspective paper exploring the phenomenology of time and its relationship to physical space and personal place — examining how human experience shapes and is shaped by temporal perception.</p>
           <a href="https://github.com/pr3331221/Portfolio/blob/main/ARP STEP 5-FINAL.pdf" class="research-link" target="_blank">Read Paper (PDF)</a>
         </div>
-        <div class="research-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:130px;word-break:break-word;">
-          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);">PDF</span>
-          <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);text-align:right;line-height:1.5;">Philosophy · Humanities</span>
+        <div class="research-meta">
+          <span style="display:block;margin-bottom:6px;">PDF</span>
+          <span>Philosophy · Humanities</span>
         </div>
       </div>
 
@@ -660,13 +658,13 @@
         Let's build<br>something <em>great</em><br>together.
       </div>
       <div class="contact-links fade-in">
-        <a href="/cdn-cgi/l/email-protection#89d9fbe6edb8bbbbb8c9eee4e8e0e5a7eae6e4" class="contact-item">
+        <a href="mailto:Prod1221@gmail.com" class="contact-item">
           <div class="contact-icon">
             <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
           </div>
           <div>
             <div class="contact-item-label">Email</div>
-            <div class="contact-item-value"><span class="__cf_email__" data-cfemail="feae8c919acfcccccfbe99939f9792d09d9193">[email&#160;protected]</span></div>
+            <div class="contact-item-value">Prod1221@gmail.com</div>
           </div>
         </a>
         <a href="https://github.com/pr3331221" target="_blank" class="contact-item">
@@ -703,7 +701,7 @@
     <div class="lightbox-caption" id="lightbox-caption"></div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     // Lightbox
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lightbox-img');
@@ -745,4 +743,13 @@
     document.querySelectorAll('.projects-grid .project-card').forEach((el, i) => {
       el.style.transitionDelay = `${i * 50}ms`;
     });
-    document.querySelectorAll('.experience-list .job-card').
+    document.querySelectorAll('.experience-list .job-card').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 60}ms`;
+    });
+    document.querySelectorAll('.skills-grid .skill-group').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 40}ms`;
+    });
+  </script>
+
+</body>
+</html>
