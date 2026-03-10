@@ -39,7 +39,9 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score, KFold
+from sklearn.model_selection import (
+    cross_val_score, KFold, TimeSeriesSplit, RandomizedSearchCV
+)
 from sklearn.impute import SimpleImputer
 
 warnings.filterwarnings("ignore")
@@ -110,11 +112,16 @@ FEATURE_COLS = [
     "PE_vs_Sector_Fwd",         # forward PE premium/discount vs sector peers
     "Insider_Pct",              # management skin in the game
     "Short_Interest_Ratio",     # short squeeze potential
-    # - Market context -
+    # - Market context & macro regime -
     "Return_1Y_vs_SPY",         # pure alpha vs S&P 500
     "Return_3Y_vs_SPY",
     "SPY_Return_1Y",            # market regime context
     "SPY_Vol_1Y",
+    "SPY_ATH_Drawdown",         # how far SPY is from its 1Y high (market stress indicator)
+    "SPY_200SMA_Pct",           # SPY above/below its 200SMA (bull/bear regime)
+    # - Macro regime: volatility and rates -
+    "VIX_Level",                # market fear/calm at prediction date (1-month avg VIX)
+    "Yield_Spread",             # 10Y minus 3mo Treasury spread (recession early warning)
     # - Data completeness flags -
     "Has_3Y_History", "Has_5Y_History", "Has_6Y_History",
 ]
@@ -227,7 +234,83 @@ def compute_vol(close: pd.Series, days: int) -> float:
     return np.nan
 
 
-def fetch_single(ticker: str) -> dict | None:
+def load_edgar_cik_map() -> dict:
+    """
+    Load SEC EDGAR's company-to-CIK mapping (free, official source).
+    Returns {TICKER: cik_int} or empty dict on failure.
+    Requires internet access; fails gracefully so yfinance is always the fallback.
+    """
+    import urllib.request, json
+    try:
+        url = "https://www.sec.gov/files/company_tickers.json"
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "portfolio-model research@example.com"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = json.loads(resp.read())
+        cik_map = {v["ticker"].upper(): v["cik_str"] for v in raw.values()}
+        log.info(f"EDGAR CIK map loaded: {len(cik_map)} companies")
+        return cik_map
+    except Exception as e:
+        log.warning(f"EDGAR CIK map unavailable ({e}) -- will use yfinance earnings only")
+        return {}
+
+
+def fetch_edgar_eps(ticker: str, cik_map: dict) -> float:
+    """
+    Fetch historical annual EPS from SEC EDGAR XBRL API and return the
+    YoY growth rate -- a higher-quality earnings revision signal than
+    yfinance's forward vs trailing EPS comparison.
+
+    Data source: data.sec.gov (free, no API key needed, official SEC data).
+    Falls back to NaN on any network or parsing error.
+    """
+    import urllib.request, json
+    cik = cik_map.get(ticker.upper())
+    if not cik:
+        return np.nan
+    try:
+        url = (
+            f"https://data.sec.gov/api/xbrl/companyfacts/"
+            f"CIK{str(cik).zfill(10)}.json"
+        )
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "portfolio-model research@example.com"}
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read())
+
+        us_gaap = data.get("facts", {}).get("us-gaap", {})
+        # Try EPS first, fall back to net income (for companies reporting in total $)
+        for key in ["EarningsPerShareDiluted", "EarningsPerShareBasic"]:
+            if key not in us_gaap:
+                continue
+            units = us_gaap[key].get("units", {})
+            eps_data = units.get("USD/shares", [])
+            if not eps_data:
+                continue
+            # Annual 10-K filings only, sorted newest first
+            annual = sorted(
+                [x for x in eps_data if x.get("form") == "10-K" and "val" in x],
+                key=lambda x: x.get("end", ""),
+                reverse=True,
+            )
+            if len(annual) >= 2:
+                eps_new = float(annual[0]["val"])
+                eps_old = float(annual[1]["val"])
+                if eps_old != 0 and not np.isnan(eps_new) and not np.isnan(eps_old):
+                    growth = (eps_new - eps_old) / abs(eps_old)
+                    return float(np.clip(growth, -2.0, 5.0))
+    except Exception:
+        pass
+    return np.nan
+
+
+def fetch_single(ticker: str):
+    """
+    Fetch price history and fundamentals for a single ticker.
+    Returns a feature dict or None if the ticker should be skipped.
+    """
     try:
         t      = yf.Ticker(ticker)
         hist   = t.history(period="max")
@@ -680,6 +763,10 @@ def fetch_single(ticker: str) -> dict | None:
             "Return_3Y_vs_SPY":       np.nan,
             "SPY_Return_1Y":          np.nan,
             "SPY_Vol_1Y":             np.nan,
+            "SPY_ATH_Drawdown":       np.nan,   # market stress at scoring date
+            "SPY_200SMA_Pct":         np.nan,   # bull/bear regime at scoring date
+            "VIX_Level":              np.nan,   # filled in fetch_all (same value all stocks)
+            "Yield_Spread":           np.nan,   # filled in fetch_all (same value all stocks)
             # Hedge-fund grade forward-looking signals
             "Piotroski_Score":        piotroski_score,    # 0-1 fundamental quality
             "DCF_Implied_Return":     dcf_implied_return, # forward-looking fair value gap
@@ -774,8 +861,43 @@ def fetch_all(tickers: list[str]) -> pd.DataFrame:
         df["SPY_Return_1Y"] = spy_r1y
         df["SPY_Vol_1Y"]    = spy_v1y
         log.info(f"SPY 1Y={spy_r1y:.1%}  3Y={spy_r3y:.1%}  Vol={spy_v1y:.1%}")
+
+        # -- NEW: SPY macro regime features --
+        # These give the model context about WHERE we are in the market cycle.
+        # The same stock features mean different things in a deep bear vs a raging bull.
+        spy_price     = float(spy_hist.iloc[-1])
+        spy_ath_1y    = float(spy_hist.iloc[-min(252, len(spy_hist)):].max())
+        spy_sma200_v  = float(spy_hist.rolling(200).mean().iloc[-1]) if len(spy_hist) >= 200 else np.nan
+        spy_ath_dd    = float(spy_price / spy_ath_1y - 1)          if spy_ath_1y > 0          else np.nan
+        spy_200pct    = float(spy_price / spy_sma200_v - 1)        if not np.isnan(spy_sma200_v) and spy_sma200_v > 0 else np.nan
+        df["SPY_ATH_Drawdown"] = spy_ath_dd
+        df["SPY_200SMA_Pct"]   = spy_200pct
+        log.info(f"SPY regime: ATH_Drawdown={spy_ath_dd:.1%}  200SMA_Pct={spy_200pct:.1%}")
     except Exception as e:
         log.warning(f"SPY fetch failed ({e}) - relative strength features will be NaN")
+
+    # -- Current macro regime: VIX fear gauge and yield curve spread --
+    # VIX: < 15 = calm, 15-20 = normal, 20-30 = elevated, > 30 = stress/crisis.
+    # Yield spread (10Y - 3mo): positive = normal curve, negative = inverted (recession warning).
+    # These are the SAME value for every stock at scoring time (market-wide signals),
+    # but differ ACROSS training windows (model learns how they affect outcomes).
+    try:
+        vix_now = float(yf.Ticker("^VIX").history(period="5d")["Close"].iloc[-1])
+        df["VIX_Level"] = vix_now
+        log.info(f"Current VIX: {vix_now:.1f}")
+    except Exception as e:
+        log.warning(f"VIX fetch failed ({e}) -- VIX_Level will be NaN")
+        df["VIX_Level"] = np.nan
+
+    try:
+        tnx_now    = float(yf.Ticker("^TNX").history(period="5d")["Close"].iloc[-1])
+        irx_now    = float(yf.Ticker("^IRX").history(period="5d")["Close"].iloc[-1])
+        spread_now = tnx_now - irx_now
+        df["Yield_Spread"] = spread_now
+        log.info(f"Yield spread (10Y-3mo): {spread_now:+.2f}%  (10Y={tnx_now:.2f}%  3mo={irx_now:.2f}%)")
+    except Exception as e:
+        log.warning(f"Yield curve fetch failed ({e}) -- Yield_Spread will be NaN")
+        df["Yield_Spread"] = np.nan
 
     # - Sector-relative valuation -
     # A PE of 30 means nothing without sector context.
@@ -801,6 +923,30 @@ def fetch_all(tickers: list[str]) -> pd.DataFrame:
     log.info("Sector-relative PE computed.")
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # -- EDGAR earnings supplement --
+    # For stocks where yfinance returned no Earnings_Revision, try SEC EDGAR.
+    # EDGAR provides historical annual EPS from official 10-K filings -- more
+    # reliable than yfinance's forward vs trailing EPS approximation.
+    # This runs as a batch after the main fetch; failures are silent per-stock.
+    if "Earnings_Revision" in df.columns:
+        missing_er = df["Earnings_Revision"].isna()
+        n_missing  = missing_er.sum()
+        if n_missing > 0:
+            log.info(f"Supplementing {n_missing} missing Earnings_Revision values from SEC EDGAR...")
+            edgar_cik_map = load_edgar_cik_map()
+            if edgar_cik_map:
+                filled = 0
+                for idx, row in df[missing_er].iterrows():
+                    er = fetch_edgar_eps(row["Ticker"], edgar_cik_map)
+                    if not np.isnan(er):
+                        df.at[idx, "Earnings_Revision"] = er
+                        filled += 1
+                    time.sleep(0.05)   # respectful rate-limit for SEC servers
+                log.info(f"EDGAR filled {filled}/{n_missing} missing Earnings_Revision values")
+            else:
+                log.info("EDGAR CIK map empty -- skipping earnings supplement")
+
     return df
 
 
@@ -870,7 +1016,26 @@ def build_rolling_training_set(df: pd.DataFrame, spy_close: pd.Series) -> pd.Dat
             import pickle
             with open(ohlc_cache_path, "rb") as f:
                 ohlc_cache = pickle.load(f)
-            log.info(f"OHLC cache loaded: {len(ohlc_cache)} tickers. Generating rolling windows...")
+            # Count only real ticker entries (macro keys start/end with __)
+            n_stock_entries = sum(1 for k in ohlc_cache if not (k.startswith("__") and k.endswith("__")))
+            n_macro_entries = len(ohlc_cache) - n_stock_entries
+            log.info(
+                f"OHLC cache loaded: {n_stock_entries} stock tickers"
+                + (f" + {n_macro_entries} macro series" if n_macro_entries > 0 else "")
+                + ". Generating rolling windows..."
+            )
+            # Load cached macro time series (populated by updated cache_ohlc.py).
+            # These enable historical VIX and yield curve features per training window --
+            # the same stock in a low-VIX bull market vs a VIX-40 crash year is very different.
+            vix_series = ohlc_cache.get("__VIX__", pd.Series(dtype=float))
+            tnx_series = ohlc_cache.get("__TNX__", pd.Series(dtype=float))
+            irx_series = ohlc_cache.get("__IRX__", pd.Series(dtype=float))
+            has_macro  = len(vix_series) > 252 and len(tnx_series) > 252
+            log.info(
+                f"Macro series: VIX={len(vix_series)} days  "
+                f"TNX={len(tnx_series)} days  IRX={len(irx_series)} days  "
+                f"({'active' if has_macro else 'not available -- run updated cache_ohlc.py'})"
+            )
             single_window_rows = rows  # preserve fallback before attempting rolling windows
             rows = []
             spy_returns = {}
@@ -886,9 +1051,51 @@ def build_rolling_training_set(df: pd.DataFrame, spy_close: pd.Series) -> pd.Dat
                 spy_r1y_w = compute_return(spy_slice, 252)
                 spy_r3y_w = compute_return(spy_slice, 756)
                 spy_v1y_w = compute_vol(spy_slice, 252)
-                spy_returns[offset] = (spy_r1y_w, spy_r3y_w, spy_v1y_w)
+
+                # SPY 6Y return starting from window end (used for alpha labels)
+                spy_future = spy_close.iloc[end:end + WINDOW_6Y]
+                spy_6y_w   = compute_return(
+                    pd.concat([spy_close.iloc[end-1:end], spy_future]),
+                    len(spy_future) + 1
+                ) if len(spy_future) >= WINDOW_6Y - 30 else np.nan
+
+                # SPY regime at window end date (macro context features)
+                spy_end_px    = float(spy_close.iloc[end - 1]) if end > 0 else np.nan
+                spy_ath_w     = float(spy_close.iloc[max(0, end-252):end].max()) if end > 0 else np.nan
+                spy_sma200_w  = float(spy_close.iloc[max(0, end-200):end].mean()) if end >= 200 else np.nan
+                spy_ath_dd_w  = float(spy_end_px / spy_ath_w - 1)     if (not np.isnan(spy_ath_w)    and spy_ath_w    > 0) else np.nan
+                spy_200pct_w  = float(spy_end_px / spy_sma200_w - 1)  if (not np.isnan(spy_sma200_w) and spy_sma200_w > 0) else np.nan
+
+                # Historical VIX at this window date (1-month average to smooth event spikes)
+                # VIX and SPY share the same US trading calendar so integer offsets align.
+                vix_at_w = np.nan
+                if has_macro and len(vix_series) > offset:
+                    vix_end_i = len(vix_series) - offset
+                    if vix_end_i >= 21:
+                        vix_slice = vix_series.iloc[max(0, vix_end_i - 21):vix_end_i]
+                        if len(vix_slice) > 0:
+                            vix_at_w = float(vix_slice.mean())
+
+                # Historical yield spread (10Y - 3mo) at this window date
+                yield_spread_w = np.nan
+                if has_macro and len(tnx_series) > offset and len(irx_series) > offset:
+                    tnx_i = len(tnx_series) - offset
+                    irx_i = len(irx_series) - offset
+                    if tnx_i > 0 and irx_i > 0:
+                        try:
+                            tnx_w = float(tnx_series.iloc[tnx_i - 1])
+                            irx_w = float(irx_series.iloc[irx_i - 1])
+                            if not np.isnan(tnx_w) and not np.isnan(irx_w):
+                                yield_spread_w = tnx_w - irx_w
+                        except Exception:
+                            pass
+
+                spy_returns[offset] = (spy_r1y_w, spy_r3y_w, spy_v1y_w, spy_6y_w, spy_ath_dd_w, spy_200pct_w, vix_at_w, yield_spread_w)
 
             for ticker, close in ohlc_cache.items():
+                # Skip macro series stored under double-underscore keys (__VIX__, __TNX__, __IRX__)
+                if ticker.startswith("__") and ticker.endswith("__"):
+                    continue
                 stock_row = df[df["Ticker"] == ticker]
                 if stock_row.empty:
                     continue
@@ -923,7 +1130,9 @@ def build_rolling_training_set(df: pd.DataFrame, spy_close: pd.Series) -> pd.Dat
                     if np.isnan(label):
                         continue
 
-                    spy_r1y_w, spy_r3y_w, spy_v1y_w = spy_returns.get(offset, (np.nan, np.nan, np.nan))
+                    spy_r1y_w, spy_r3y_w, spy_v1y_w, spy_6y_w, spy_ath_dd_w, spy_200pct_w, vix_at_w, yield_spread_w = spy_returns.get(
+                        offset, (np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan)
+                    )
 
                     # Compute price-derived features at window end (= prediction date)
                     r6mo_w = compute_return(window, 126)
@@ -974,6 +1183,11 @@ def build_rolling_training_set(df: pd.DataFrame, spy_close: pd.Series) -> pd.Dat
                         "Return_1Y_vs_SPY": r1y_w - spy_r1y_w if not np.isnan(spy_r1y_w) else np.nan,
                         "Return_3Y_vs_SPY": r3y_w - spy_r3y_w if not np.isnan(spy_r3y_w) else np.nan,
                         "SPY_Return_1Y": spy_r1y_w, "SPY_Vol_1Y": spy_v1y_w,
+                        "SPY_ATH_Drawdown": spy_ath_dd_w,   # market stress at this window date
+                        "SPY_200SMA_Pct":   spy_200pct_w,   # bull/bear regime at this window date
+                        "SPY_6Y_Return_at_window": spy_6y_w, # used for alpha label in build_model
+                        "VIX_Level":        vix_at_w,        # fear gauge at this window date
+                        "Yield_Spread":     yield_spread_w,  # yield curve at this window date
                         "Has_3Y_History": int(len(window)>=756),
                         "Has_5Y_History": int(len(window)>=1260),
                         "Has_6Y_History": 1,
@@ -1020,7 +1234,37 @@ def build_model(df: pd.DataFrame):
     if len(train_df) < 30:
         log.warning("Fewer than 30 training samples - ensemble will be weak.")
 
-    y = train_df["Return_6Y"].clip(-0.99, 20.0)
+    # -- SPY expected 6Y return (used for alpha back-conversion at scoring time) --
+    spy_expected_6y = compute_return(spy_close, WINDOW_6Y)
+    if np.isnan(spy_expected_6y):
+        spy_expected_6y = 0.80   # fallback: ~10%/yr compounded for 6 years
+    log.info(f"SPY expected 6Y return (for alpha back-conversion): {spy_expected_6y:.1%}")
+
+    # -- IMPROVEMENT 1: Train on ALPHA, not raw return --
+    # Alpha = stock return - SPY return over the SAME window.
+    # This removes the entire market beta from labels so the model learns
+    # "what makes a stock beat the market" instead of "bull markets produce gains."
+    if "SPY_6Y_Return_at_window" in train_df.columns:
+        spy_6y_per_row = train_df["SPY_6Y_Return_at_window"].clip(-0.99, 5.0)
+        spy_6y_per_row = spy_6y_per_row.fillna(spy_expected_6y)
+        alpha_6y = train_df["Return_6Y"].clip(-0.99, 20.0) - spy_6y_per_row
+        log.info("Labels: 6Y alpha (stock return - SPY return, removes market beta)")
+    else:
+        alpha_6y = train_df["Return_6Y"].clip(-0.99, 20.0)
+        log.info("Labels: raw 6Y return (SPY_6Y_Return_at_window unavailable -- single window run)")
+
+    # -- IMPROVEMENT 2: Log-transform labels --
+    # 6Y alphas are heavily right-skewed: a few stocks return 1000%+ alpha,
+    # most return -50% to +300%. Raw regression wastes capacity on tail outliers.
+    # log1p compression: 1000% → ~2.40, 300% → ~1.39, -50% → ~-0.69
+    # sign * log1p(|x|) preserves sign and handles negatives cleanly.
+    y = alpha_6y.apply(
+        lambda v: float(np.sign(v) * np.log1p(abs(v))) if not np.isnan(v) else 0.0
+    ).clip(-4.0, 4.0)
+    log.info(
+        f"Log-alpha labels: mean={y.mean():.3f}  std={y.std():.3f}  "
+        f"min={y.min():.3f}  max={y.max():.3f}"
+    )
 
     # Ensure all feature cols exist
     for col in FEATURE_COLS + FORWARD_LOOKING_FEATURES:
@@ -1030,11 +1274,17 @@ def build_model(df: pd.DataFrame):
     X_all  = train_df[FEATURE_COLS].copy()
     X_fwd  = train_df[[f for f in FORWARD_LOOKING_FEATURES if f in train_df.columns]].copy()
 
+    # Store window offsets before dedup (needed for temporal sort)
+    offsets = train_df["_window_offset"].values.copy() if "_window_offset" in train_df.columns else None
+
     # Deduplicate
     if "_window_offset" in train_df.columns:
         dedup = train_df["Ticker"].astype(str) + "_" + train_df["_window_offset"].astype(str)
         keep  = ~dedup.duplicated()
-        X_all, X_fwd, y = X_all[keep], X_fwd[keep], y[keep]
+        X_all   = X_all[keep].copy()
+        X_fwd   = X_fwd[keep].copy()
+        y       = y[keep].copy()
+        offsets = offsets[keep.values] if offsets is not None else None
 
     log.info(f"After dedup: {len(X_all)} training samples, {X_all.shape[1]} features")
 
@@ -1058,12 +1308,29 @@ def build_model(df: pd.DataFrame):
             X_fwd[col] = X_fwd[col].clip(lo, hi)
 
     log.info(f"Winsorization applied: {len(winsor_bounds)} features clipped at 1st/99th pct")
-    # Log the most aggressive clips (features with extreme outliers)
     clips = [(c, winsor_bounds[c][0], winsor_bounds[c][1]) for c in winsor_bounds]
     clips.sort(key=lambda x: x[2]-x[1])
     log.info("Widest-range features after winsorization (top 5):")
     for col, lo, hi in clips[-5:]:
         log.info(f"  {col:<30} [{lo:.3f}, {hi:.3f}]")
+
+    # -- IMPROVEMENT 3: Temporal sort + TimeSeriesSplit CV (no future-leakage) --
+    # Current KFold(shuffle=True) assigns 2021 samples to training while validating
+    # on 2015 samples -- the model validates on the past using the future as training.
+    # TimeSeriesSplit trains on oldest windows and validates on newest, which matches
+    # how the model is actually used: always predicting the future from the past.
+    if offsets is not None and len(offsets) > 0:
+        # Larger _window_offset = older window (further from "today").
+        # Sorting descending offset = ascending time = oldest samples first.
+        time_order = np.argsort(offsets)[::-1]
+        X_all = X_all.iloc[time_order].reset_index(drop=True)
+        X_fwd = X_fwd.iloc[time_order].reset_index(drop=True)
+        y     = y.iloc[time_order].reset_index(drop=True)
+        cv    = TimeSeriesSplit(n_splits=5)
+        log.info("CV: TimeSeriesSplit (oldest→newest, no temporal leakage -- methodologically correct)")
+    else:
+        cv = KFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+        log.info("CV: KFold (single-window set -- no temporal structure to exploit)")
 
     def make_gbm(n=500, depth=4, lr=0.04, leaf=8):
         return GradientBoostingRegressor(
@@ -1095,26 +1362,66 @@ def build_model(df: pd.DataFrame):
     ])
 
     r2_full, r2_fwd, r2_ridge = 0.645, 0.390, 0.189  # defaults from prior run
+
     if len(X_all) >= 100:
-        cv = KFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+        # -- IMPROVEMENT 4: RandomizedSearchCV for Full GBM hyperparameters --
+        # Fixed hyperparameters (n_estimators=600, max_depth=4, lr=0.04) were
+        # chosen from a single prior run. RandomizedSearchCV finds the best
+        # combo for the CURRENT training set in ~12 trials using the same CV folds.
+        if len(X_all) >= 200:
+            param_dist = {
+                "model__n_estimators":     [400, 500, 600, 800],
+                "model__max_depth":        [3, 4, 5],
+                "model__learning_rate":    [0.03, 0.04, 0.05, 0.06],
+                "model__subsample":        [0.65, 0.75, 0.85],
+                "model__min_samples_leaf": [6, 8, 10],
+            }
+            log.info("Running RandomizedSearchCV for Full GBM (12 trials)...")
+            search1 = RandomizedSearchCV(
+                pipe1, param_dist, n_iter=12, cv=cv,
+                scoring="r2", random_state=RANDOM_STATE,
+                n_jobs=-1, refit=True,
+            )
+            search1.fit(X_all, y)
+            pipe1    = search1.best_estimator_   # already fitted on full data (refit=True)
+            r2_full  = max(search1.best_score_, 0.01)
+            log.info(f"  Full GBM best params: {search1.best_params_}")
+            log.info(f"  Full GBM CV R2 (time-aware): {r2_full:.3f}")
+        else:
+            # Not enough data for RandomizedSearchCV -- just run regular CV
+            try:
+                scores  = cross_val_score(pipe1, X_all, y, cv=cv, scoring="r2")
+                r2_full = max(float(scores.mean()), 0.01)
+                log.info(f"  Full GBM     CV R2: {scores.round(3)}  mean={r2_full:.3f}")
+                pipe1.fit(X_all, y)
+            except Exception as e:
+                log.warning(f"  Full GBM CV failed: {e}")
+                pipe1.fit(X_all, y)
+
+        # Forward GBM and Ridge: run standard CV to get R2 for blend weights
         for name, pipe, X, key in [
-            ("Full GBM",    pipe1, X_all, "full"),
             ("Forward GBM", pipe2, X_fwd, "fwd"),
             ("Ridge",       pipe3, X_all, "ridge"),
         ]:
             try:
-                scores = cross_val_score(pipe, X, y, cv=cv, scoring="r2")
-                mean_r2 = float(scores.mean())
+                scores   = cross_val_score(pipe, X, y, cv=cv, scoring="r2")
+                mean_r2  = float(scores.mean())
                 log.info(f"  {name:<14} CV R2: {scores.round(3)}  mean={mean_r2:.3f}")
-                if key == "full":   r2_full  = max(mean_r2, 0.01)
-                elif key == "fwd":  r2_fwd   = max(mean_r2, 0.01)
+                if key == "fwd":   r2_fwd   = max(mean_r2, 0.01)
                 elif key == "ridge": r2_ridge = max(mean_r2, 0.01)
             except Exception as e:
                 log.warning(f"  {name} CV failed: {e}")
 
-    pipe1.fit(X_all, y)
-    pipe2.fit(X_fwd, y)
-    pipe3.fit(X_all, y)
+        # Fit Forward GBM and Ridge on full training data
+        pipe2.fit(X_fwd, y)
+        pipe3.fit(X_all, y)
+
+    else:
+        # Too few samples for CV -- just fit directly
+        pipe1.fit(X_all, y)
+        pipe2.fit(X_fwd, y)
+        pipe3.fit(X_all, y)
+
     log.info("Ensemble trained (Full GBM + Forward GBM + Ridge).")
 
     # Blend weights proportional to CV R2, with Forward GBM capped at 35%
@@ -1141,12 +1448,13 @@ def build_model(df: pd.DataFrame):
 
     # Return all three pipelines, forward feature list, winsorization bounds
     return {
-        "pipe_full":     pipe1,
-        "pipe_forward":  pipe2,
-        "pipe_ridge":    pipe3,
-        "fwd_features":  [f for f in FORWARD_LOOKING_FEATURES if f in X_fwd.columns],
-        "blend":         (w_full, w_fwd, w_ridge),
-        "winsor_bounds": winsor_bounds,
+        "pipe_full":       pipe1,
+        "pipe_forward":    pipe2,
+        "pipe_ridge":      pipe3,
+        "fwd_features":    [f for f in FORWARD_LOOKING_FEATURES if f in X_fwd.columns],
+        "blend":           (w_full, w_fwd, w_ridge),
+        "winsor_bounds":   winsor_bounds,
+        "spy_expected_6y": spy_expected_6y,   # for alpha back-conversion in score_stocks
     }
 
 # ---------------------------------------------
@@ -1340,22 +1648,40 @@ def score_stocks(df: pd.DataFrame, ensemble: dict) -> pd.DataFrame:
     pred_forward = pipe_forward.predict(X_fwd)
     pred_ridge   = pipe_ridge.predict(X_all)
 
-    df["Score_Full_GBM"]    = pred_full
-    df["Score_Forward_GBM"] = pred_forward
-    df["Score_Ridge"]       = pred_ridge
-    df["Predicted_6Y_Return"] = w1*pred_full + w2*pred_forward + w3*pred_ridge
+    # -- Back-convert from log-alpha space to absolute predicted returns --
+    # Model was trained on: y = sign(alpha) * log1p(|alpha|)  where alpha = stock - SPY
+    # Inverse:              alpha = sign(pred) * expm1(|pred|)
+    # Absolute return:      alpha + spy_expected_6y
+    spy_6y = ensemble.get("spy_expected_6y", 0.80)
+    pred_alpha_full    = np.sign(pred_full)    * np.expm1(np.abs(pred_full))
+    pred_alpha_forward = np.sign(pred_forward) * np.expm1(np.abs(pred_forward))
+    pred_alpha_ridge   = np.sign(pred_ridge)   * np.expm1(np.abs(pred_ridge))
+
+    # Store individual model scores as absolute predicted returns (alpha + SPY)
+    df["Score_Full_GBM"]    = pred_alpha_full    + spy_6y
+    df["Score_Forward_GBM"] = pred_alpha_forward + spy_6y
+    df["Score_Ridge"]       = pred_alpha_ridge   + spy_6y
+
+    # Blend in alpha space (before adding SPY), then convert
+    blended_alpha = w1*pred_alpha_full + w2*pred_alpha_forward + w3*pred_alpha_ridge
+    df["Predicted_6Y_Return"] = blended_alpha + spy_6y
 
     # Model agreement: how much do the three models disagree?
+    # Computed in absolute return space (after back-conversion) for interpretability.
     # High disagreement = less confidence in the prediction
-    preds_matrix = np.column_stack([pred_full, pred_forward, pred_ridge])
-    df["Model_Agreement"] = 1.0 - (np.std(preds_matrix, axis=1) /
-                                    (np.abs(np.mean(preds_matrix, axis=1)) + 0.01))
+    abs_preds = np.column_stack([
+        df["Score_Full_GBM"].values,
+        df["Score_Forward_GBM"].values,
+        df["Score_Ridge"].values,
+    ])
+    df["Model_Agreement"] = 1.0 - (np.std(abs_preds, axis=1) /
+                                    (np.abs(np.mean(abs_preds, axis=1)) + 0.01))
     df["Model_Agreement"] = df["Model_Agreement"].clip(0, 1)
 
     # Forward vs momentum gap: if forward GBM >> full GBM,
     # the DCF/fundamentals see more value than momentum does (potential hidden gem).
     # If full GBM >> forward GBM, momentum is driving the score, not fundamentals.
-    df["Forward_vs_Momentum_Gap"] = pred_forward - pred_full
+    df["Forward_vs_Momentum_Gap"] = df["Score_Forward_GBM"] - df["Score_Full_GBM"]
 
     log.info(f"Ensemble predictions: min={df['Predicted_6Y_Return'].min():.2f}  "
              f"max={df['Predicted_6Y_Return'].max():.2f}  "
@@ -2171,13 +2497,17 @@ def main():
 if __name__ == "__main__":
     main()
 
+
 """
 cache_ohlc.py
 =============
-One-time script to download and cache raw OHLC price histories for all tickers.
+One-time script to download and cache raw OHLC price histories for all tickers
+PLUS the macro time series (VIX, 10Y Treasury yield, 3-month T-bill yield)
+needed for historical regime features in rolling training windows.
+
 Run this ONCE before running main.py. After that, main.py will automatically
 use the cached data to generate rolling 6Y training windows, giving the ML
-model 5-10x more training samples.
+model 5-10x more training samples with full macro context per window.
 
 Uses the EXACT same ticker filters as main.py so no junk gets cached:
   - Market cap >= $500M
@@ -2192,7 +2522,14 @@ Usage:
     python cache_ohlc.py
 
 Output:
-    data/raw_ohlc_cache.pkl  -- dict mapping ticker -> pd.Series of close prices
+    data/raw_ohlc_cache.pkl  -- dict mapping:
+        ticker -> pd.Series of close prices (for all qualifying stocks)
+        "__VIX__"  -> pd.Series of VIX daily closes (full history)
+        "__TNX__"  -> pd.Series of 10Y Treasury yield daily closes
+        "__IRX__"  -> pd.Series of 3-month T-bill yield daily closes
+
+The macro series (VIX, TNX, IRX) are stored under double-underscore keys
+so they never collide with real ticker symbols.
 
 Runtime: ~2-3 hours for 3000 tickers on a normal connection.
 You only need to run this once; re-run every few months to refresh.
@@ -2287,7 +2624,14 @@ def main():
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "rb") as f:
             cache = pickle.load(f)
-        log.info(f"Loaded existing cache: {len(cache)} tickers. Skipping already-cached.")
+        # Exclude macro series keys from the stock count for accurate logging
+        n_stocks = sum(1 for k in cache if not (k.startswith("__") and k.endswith("__")))
+        n_macro  = len(cache) - n_stocks
+        log.info(
+            f"Loaded existing cache: {n_stocks} stock tickers"
+            + (f" + {n_macro} macro series" if n_macro > 0 else "")
+            + ". Skipping already-cached."
+        )
 
     tickers  = load_tickers(TICKER_FILE)
     to_fetch = [t for t in tickers if t not in cache]
@@ -2300,10 +2644,9 @@ def main():
             hist  = yf.Ticker(tk).history(period="max")
             close = hist["Close"].dropna()
 
-            if SUFFIX_RE.match(tk):
-                skipped += 1
-                continue
-
+            # load_tickers() already filtered warrants/rights/units before this loop.
+            # No need to re-check SUFFIX_RE here -- that would only matter if somehow
+            # a suffix symbol slipped through, and it would be caught by the len check anyway.
             if len(close) >= MIN_DAYS:
                 cache[tk] = close
                 saved += 1
@@ -2325,7 +2668,40 @@ def main():
     log.info(f"Cache complete: {len(cache)} tickers saved to {CACHE_FILE}")
     log.info(f"  New saves:  {saved}")
     log.info(f"  Skipped:    {skipped} (failed filters or <6Y history)")
-    log.info("Run main.py -- it will automatically use rolling windows now.")
+
+    # -- Cache macro time series for historical regime features --
+    # Stored under double-underscore keys that never collide with real tickers.
+    # main.py reads these to inject VIX level and yield curve spread into each
+    # rolling training window, teaching the model how regime context affects outcomes.
+    log.info("Caching macro time series (VIX, 10Y Treasury, 3mo T-bill)...")
+    macro_symbols = [
+        ("^VIX", "__VIX__",  "VIX fear gauge"),
+        ("^TNX", "__TNX__",  "10Y Treasury yield"),
+        ("^IRX", "__IRX__",  "3-month T-bill yield"),
+    ]
+    macro_saved = 0
+    for symbol, key, desc in macro_symbols:
+        try:
+            hist  = yf.Ticker(symbol).history(period="max")
+            close = hist["Close"].dropna()
+            if len(close) > 252:
+                cache[key] = close
+                macro_saved += 1
+                log.info(f"  {desc} ({symbol}): {len(close)} trading days cached as '{key}'")
+            else:
+                log.warning(f"  {desc} ({symbol}): insufficient data ({len(close)} days), skipped")
+            time.sleep(FETCH_PAUSE)
+        except Exception as e:
+            log.warning(f"  {desc} ({symbol}): failed ({e})")
+
+    if macro_saved > 0:
+        with open(CACHE_FILE, "wb") as f:
+            pickle.dump(cache, f)
+        log.info(f"Macro series saved ({macro_saved}/3): {CACHE_FILE} updated")
+    else:
+        log.warning("No macro series cached -- historical VIX/yield features will be NaN in training windows")
+
+    log.info("Run main.py -- it will automatically use rolling windows with macro regime features now.")
 
 
 if __name__ == "__main__":
