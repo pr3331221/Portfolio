@@ -2706,3 +2706,298 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# 6-Year Stock Portfolio Optimizer
+
+A machine learning system that selects and allocates capital across 50 stocks for maximum long-term growth over a 6-year horizon. Designed for aggressive long-term investors who want a data-driven, systematic approach to portfolio construction.
+
+---
+
+## What It Does
+
+You give it a list of stocks and $10,000. It gives you back a fully allocated portfolio — ticker by ticker, dollar by dollar — ranked and weighted by a trained ensemble of ML models that learned from decades of actual stock market outcomes.
+
+It is **not** a trading bot. It makes one decision: where to put money today and leave it for 6 years.
+
+---
+
+## How It Works (Overview)
+
+The system runs in 7 sequential steps:
+
+```
+tickers.csv
+    │
+    ▼
+[1] Filter (remove warrants, OTC, micro-caps)
+    │
+    ▼
+[2] Fetch data (price history + fundamentals via yfinance + SEC EDGAR)
+    │
+    ▼
+[3] Train ML ensemble (GBM × 2 + Ridge, on 6-year historical outcomes)
+    │
+    ▼
+[4] Score all stocks (predict 6-year return, compute model confidence)
+    │
+    ▼
+[5] Allocate capital (apply penalty multipliers, rank, weight, cap at 15%)
+    │
+    ▼
+[6] Export final_6yr_portfolio.csv
+    │
+    ▼
+[7] Market health assessment (VIX, yield curve, breadth — context only)
+```
+
+---
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `final_6yr_portfolio.py` | Main pipeline — run this to generate your portfolio |
+| `cache_ohlc.py` | One-time data downloader — run this first for best results |
+| `data/tickers.csv` | Your stock universe (download from NASDAQ screener) |
+| `data/raw_ohlc_cache.pkl` | Auto-generated price history cache (created by `cache_ohlc.py`) |
+| `final_6yr_portfolio.csv` | Output — your final allocated portfolio |
+| `raw_fetched_data.csv` | Output — all fetched data for every stock scored |
+| `portfolio_run.log` | Full run log with model diagnostics and explanations |
+
+---
+
+## Setup
+
+### Requirements
+
+```bash
+pip install yfinance pandas numpy scikit-learn tqdm
+```
+
+Python 3.10 or higher recommended.
+
+### Get Your Ticker List
+
+1. Go to [https://www.nasdaq.com/market-activity/stocks/screener](https://www.nasdaq.com/market-activity/stocks/screener)
+2. Set filters if desired (or leave blank to get the full universe)
+3. Click **Download CSV**
+4. Save it to `data/tickers.csv`
+
+The screener CSV includes stocks from NASDAQ, NYSE, and AMEX — the system handles all of them. It automatically filters out warrants, rights, units, OTC stocks, ADRs, and anything under $500M market cap.
+
+---
+
+## Running the System
+
+### Step 1 — Cache historical data (recommended, run once)
+
+```bash
+python cache_ohlc.py
+```
+
+This downloads full price histories for every qualifying stock plus historical VIX, 10-year Treasury yield, and 3-month T-bill data. Saves everything to `data/raw_ohlc_cache.pkl`.
+
+**Why this matters:** Without the cache, the ML model trains on roughly 800 data points (one per stock with 6+ years of history). With the cache, it generates rolling training windows every quarter, turning 800 samples into 30,000+. The model learns from dozens of different market regimes instead of just today's snapshot.
+
+Runtime: 2–3 hours for a full universe. You only need to run this once — re-run every few months to refresh.
+
+**You can skip this step** and run the main script directly. The model will still work, just with a smaller training set.
+
+### Step 2 — Generate your portfolio
+
+```bash
+python final_6yr_portfolio.py
+```
+
+Runtime: 30–60 minutes depending on universe size and whether the cache exists.
+
+When it finishes, open `final_6yr_portfolio.csv` for your portfolio and `portfolio_run.log` for full diagnostics.
+
+---
+
+## Understanding the Output
+
+### `final_6yr_portfolio.csv`
+
+Sorted by allocation size (largest positions first), then by predicted return. Every stock in the universe is included — allocated stocks at the top, unallocated below with their scores.
+
+**Key columns:**
+
+| Column | What It Means |
+|---|---|
+| `Allocation_USD` | How much of your $10,000 to invest in this stock |
+| `Predicted_6Y_Return` | Ensemble model's predicted 6-year return (e.g. 1.85 = +185%) |
+| `Composite_Score` | Predicted return × model confidence — the actual ranking metric |
+| `Model_Agreement` | How much the three models agree (1.0 = full agreement, 0 = high disagreement) |
+| `Score_Full_GBM` | Prediction from the full-feature GBM (momentum + fundamentals) |
+| `Score_Forward_GBM` | Prediction from the fundamentals-only GBM (DCF, earnings, growth) |
+| `Score_Ridge` | Prediction from the linear Ridge model (conservative anchor) |
+| `DCF_Implied_Return` | Forward-looking fair value gap — what the business is worth vs current price |
+| `Return_Consistency` | How smoothly returns were distributed (high = compounder, low = spike stock) |
+| `Return_Decay` | Is recent momentum accelerating or fading vs long-term average |
+| `Piotroski_Score` | 9-point fundamental quality checklist (0–1, higher = better) |
+| `ML_Fundamental_Divergence` | Whether ML confidence is driven by momentum or real business quality |
+| `Momentum_Driver_Ratio` | Fraction of model score driven by price history vs fundamentals (lower = better) |
+| `Allocation_Multiplier` | Penalty applied (1.0 = no change, 0.25 = heavily reduced) |
+| `Allocation_Reason` | Plain-English explanation of any penalties applied |
+| `Fundamental_Score` | Independent 0–100 rule-based score using only fundamentals (no ML) |
+| `Green_Flags` | Positive signals for this stock |
+| `Red_Flags` | Warning signals for this stock |
+| `Confidence_Tier` | HIGH / MEDIUM / LOW / SPECULATIVE based on data availability |
+
+---
+
+## How the ML Model Works
+
+### The Training Label
+
+The model is trained on **actual 6-year stock returns** as the ground truth. Not quarterly earnings, not analyst ratings — what the stock actually did over 6 years. This is what you're trying to predict, so this is what the model learns.
+
+Labels are trained as **6-year alpha** (the stock's return minus what SPY returned over the same period), which removes the "bull markets produce gains" noise and forces the model to learn what makes a stock *beat the market* specifically.
+
+Labels are **log-transformed** before training to prevent a small number of 1000%+ outliers from dominating the model at the expense of the other 3,000 stocks.
+
+### Rolling Windows
+
+Each stock with 10+ years of history contributes ~20 training samples — one snapshot per quarter going back 5 years. Each snapshot shows the model what that stock looked like at a point in the past, with the label being what actually happened over the next 6 years.
+
+This means the model sees the same stock in multiple market environments: pre-COVID, COVID crash, post-COVID bull run, rate hike cycle. It learns that the same features mean different things in different regimes.
+
+### Three-Model Ensemble
+
+| Model | Features | Purpose |
+|---|---|---|
+| Full GBM | All ~50 features | Captures complex non-linear interactions between momentum, volatility, and fundamentals |
+| Forward GBM | 11 forward-looking only (DCF, earnings revisions, revenue growth, margins) | Answers "what will this business become?" without any price history |
+| Ridge Regression | All ~50 features | Linear anchor — prevents the GBMs from making wild extrapolations |
+
+**GBM** (Gradient Boosting Machine) builds hundreds of decision trees sequentially, where each new tree corrects the errors of all previous trees. It excels at finding patterns like "high DCF *and* high Sharpe *and* low debt → strong return" — rules that only work when multiple conditions hold simultaneously.
+
+The three models are blended using weights proportional to their cross-validation R² scores, measured using TimeSeriesSplit (older windows train, newer windows validate — no temporal leakage). The Forward GBM is capped at 35% weight since its features, while theoretically superior, are noisier from yfinance data.
+
+### Features Used
+
+The model uses ~50 features across six categories:
+
+- **Fundamentals** — market cap, revenue, EBITDA, FCF, profit margin, PE, debt/equity, ROE, beta
+- **Momentum** — returns over 6 months, 1 year, 3 years, 5 years; performance vs SPY
+- **Volatility & Risk** — annualized vol, max drawdown, Sharpe ratio, return skewness
+- **Return Quality** — Return Consistency (spike vs compounder), Return Decay (momentum fading)
+- **Forward-Looking** — DCF implied return, earnings revisions (via SEC EDGAR), revenue growth rate and acceleration, gross margin trend, Piotroski F-Score, forward PE, PEG ratio, insider ownership
+- **Macro Regime** — VIX level, yield curve spread (10Y minus 3mo), SPY drawdown from ATH, SPY vs 200-day SMA
+
+---
+
+## The Allocation Multipliers
+
+The ML model is good at finding patterns but has known blind spots. The allocation system applies penalty multipliers to correct for the clearest cases:
+
+| Situation | Multiplier | What It Catches |
+|---|---|---|
+| Spike trajectory detected | 0.35× max | Stock had huge gains years ago that have since stalled — model is extrapolating a past event |
+| DCF deeply contradicts ML | 0.45–0.65× | ML predicts 300%+ but fundamental cash flow analysis says the company is overvalued by 80%+ |
+| High ML/fundamental divergence | 0.55× | Model is betting purely on price history, not business quality |
+| Model disagreement | 0.75× | The three ensemble models strongly disagree with each other |
+| Death spiral | 0.25–0.30× | Stock has lost 50%+ over both 3Y and 5Y — structural multi-year decline |
+| Zero fundamentals + declining | 0.20× | No computable fundamentals, no DCF, consistent negative returns — model is pattern-matching noise |
+
+These multipliers are cumulative (they multiply together, never offset each other) and use `min()` for spike corrections (so a stock penalized to 0.10× can't have its penalty accidentally raised to 0.25× by a later spike correction).
+
+Critically, penalties are applied **before** final stock selection. The top 150 candidates by raw score have their multipliers computed, then are re-ranked by the penalized score, and only then are the top 50 selected. A heavily penalized stock can fall entirely out of the portfolio rather than just getting a smaller allocation.
+
+---
+
+## Market Health Assessment
+
+After the portfolio is exported, the system runs a macro assessment using five signals scored –2 to +2 each:
+
+| Signal | Source | What It Measures |
+|---|---|---|
+| SPY Trend | Already fetched | Price vs 200-day SMA, drawdown from 1Y high |
+| Market Breadth | Already computed | % of universe with positive 1Y and 6-month returns |
+| VIX | Live fetch | Fear gauge: <15 = calm, >30 = stress, >40 = crisis |
+| Yield Curve | Live fetch | 10Y minus 3mo Treasury spread — inversion historically precedes recessions by ~14 months |
+| Valuation | Already computed | Median PE across the full universe vs historical norms |
+
+**Total score → verdict:**
+
+| Score | Verdict |
+|---|---|
+| +6 to +10 | STRONG ENTRY OPPORTUNITY |
+| +3 to +5 | REASONABLE TIME TO ENTER |
+| 0 to +2 | NEUTRAL / MIXED SIGNALS |
+| –3 to –1 | ELEVATED RISK — CONSIDER PHASING IN SLOWLY |
+| –10 to –4 | HIGH RISK ENTRY — STRONG CAUTION |
+
+**Important:** For a 6-year hold, time *in* the market beats market *timing* in over 85% of historical rolling 6-year windows. This assessment is context for *how* to enter (lump sum vs phasing in over 6–12 months), not whether to invest at all. A failure in this step never blocks the portfolio output.
+
+---
+
+## Configuration
+
+All key parameters are at the top of `final_6yr_portfolio.py`:
+
+```python
+TOTAL_CAPITAL    = 10_000      # Total dollars to allocate
+MIN_HISTORY_DAYS = 126         # Minimum price history required (~6 months)
+MIN_MARKET_CAP   = 500_000_000 # Minimum market cap ($500M)
+MIN_ALLOCATION   = 25          # Ignore positions below this dollar amount
+MAX_ALLOC_FRAC   = 0.15        # Maximum allocation per stock (15%)
+TOP_N            = 50          # Number of stocks in final portfolio
+FETCH_PAUSE      = 0.08        # Seconds between API calls (rate limit protection)
+```
+
+To change the portfolio size to $50,000, just change `TOTAL_CAPITAL = 50_000`. Everything else scales automatically.
+
+---
+
+## Data Sources
+
+| Data | Source | Notes |
+|---|---|---|
+| Price history | yfinance (Yahoo Finance) | Full daily history, fetched free |
+| Fundamentals | yfinance (Yahoo Finance) | Market cap, PE, revenue, FCF, etc. |
+| Earnings revisions | SEC EDGAR XBRL API | Official 10-K filings — free, no API key needed |
+| VIX history | yfinance (`^VIX`) | Cached for historical regime features |
+| 10Y Treasury yield | yfinance (`^TNX`) | Cached for historical yield curve features |
+| 3-month T-bill | yfinance (`^IRX`) | Cached for historical yield spread computation |
+
+yfinance data quality is generally good but not institutional-grade. The system is designed with defense in depth — if one data source is missing or wrong for a stock, the other 49 features still operate correctly, and the EDGAR supplement fills in earnings data that yfinance misses.
+
+---
+
+## Known Limitations
+
+**Survivorship bias.** The ticker list contains stocks that exist today. Companies that went bankrupt between 2018 and 2024 don't appear. Rolling windows partially correct for this (a company that existed in 2016 but failed in 2022 does contribute a 2016 training sample), but it's not fully eliminated.
+
+**yfinance data quality.** Some fundamentals fields are stale, delayed, or incorrect for specific tickers. DCF calculations depend on revenue and FCF being accurate — bad input produces bad DCF estimates. The model uses multiple independent signals so one bad data point doesn't control the outcome.
+
+**Macro shocks are unpredictable.** No model can predict recessions, pandemics, or geopolitical events. The macro regime features (VIX, yield curve) give the model context about current conditions but cannot forecast when the next shock occurs.
+
+**CV R² of 0.4–0.65 means ~40% of return variance is explained.** That's strong for long-horizon stock prediction — academic papers publish results in this range as significant findings. But 35–60% of individual stock outcomes are driven by factors no model can see. The edge is in *ranking* (the top 50 should outperform a random 50 on average), not in precise prediction of any individual stock's return.
+
+---
+
+## Frequently Asked Questions
+
+**Can I use a different dollar amount?**
+Yes — change `TOTAL_CAPITAL` in the config section. Everything scales automatically.
+
+**Can I change the portfolio size from 50 stocks?**
+Yes — change `TOP_N`. Fewer stocks = more concentrated, higher risk/reward. More stocks = more diversified, returns closer to the index.
+
+**Do I need to re-run `cache_ohlc.py` every time?**
+No. Run it once, and `final_6yr_portfolio.py` will use the cached data automatically. Re-run every few months to refresh with more recent price history.
+
+**What if `cache_ohlc.py` gets interrupted?**
+It saves a checkpoint every 100 new tickers. Just run it again — it skips tickers already in the cache.
+
+**The program says "OHLC cache not found" — is that a problem?**
+No. The model will train on a single window per stock instead of rolling windows. It will still produce a valid portfolio, just with a smaller training set and less regime diversity.
+
+**Why is a stock I expected ranked low?**
+Check its `ML_Fundamental_Divergence`, `Return_Consistency`, `Allocation_Reason`, and `DCF_Implied_Return` columns. The most common reasons are: the model detected spike-driven past returns that have since faded, or DCF analysis found the stock significantly overvalued relative to its fundamental cash flows.
+
+**Why does the run take so long?**
+Most of the time is network I/O — yfinance fetches one ticker at a time with a small pause between calls to avoid rate-limiting. With 3,000 tickers at 0.08 seconds each, that's about 4 minutes of waiting alone, plus the actual download time. The EDGAR earnings supplement adds additional time for tickers where yfinance had no earnings revision data.
